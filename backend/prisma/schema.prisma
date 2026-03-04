@@ -1,0 +1,175 @@
+// --------------------------------------
+// DATABASE CONFIGURATION
+// --------------------------------------
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --------------------------------------
+// ENUMS
+// --------------------------------------
+enum Role {
+  ADMIN
+  ORGANIZER
+  USER
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+// --------------------------------------
+// 1. MULTI-TENANCY CORE
+// --------------------------------------
+model Tenant {
+  id                 String   @id @default(uuid())
+  name               String   @db.VarChar(100)
+  apiKey             String?  @unique @db.VarChar(255)
+  subscriptionStatus String   @default("ACTIVE")
+  createdAt          DateTime @default(now())
+
+  // Relations
+  users  User[]
+  venues Venue[]
+  events Event[]
+}
+
+model User {
+  id           String @id @default(uuid())
+  email        String @unique @db.VarChar(150)
+  passwordHash String
+  role         Role   @default(USER)
+
+  // Multi-tenancy link
+  tenantId     String
+  tenant       Tenant @relation(fields: [tenantId], references: [id])
+
+  // Relations
+  orders       Order[]
+}
+
+// --------------------------------------
+// 2. ASSET MANAGEMENT (For AI Context)
+// --------------------------------------
+model Venue {
+  id       String  @id @default(uuid())
+  name     String
+  capacity Int
+  geoLat   Float?
+  geoLong  Float?
+
+  // Multi-tenancy link
+  tenantId String
+  tenant   Tenant  @relation(fields: [tenantId], references: [id])
+
+  // Relations
+  events   Event[]
+}
+
+model Artist {
+  id              String  @id @default(uuid())
+  name            String
+  genre           String?
+  popularityScore Int     @default(0)
+
+  // Relations
+  events          EventArtistLink[]
+}
+
+// --------------------------------------
+// 3. EVENT CORE
+// --------------------------------------
+model Event {
+  id        String      @id @default(uuid())
+  title     String
+  startTime DateTime
+  status    EventStatus @default(DRAFT)
+
+  // Multi-tenancy link
+  tenantId  String
+  tenant    Tenant      @relation(fields: [tenantId], references: [id])
+
+  // Venue link
+  venueId   String
+  venue     Venue       @relation(fields: [venueId], references: [id])
+
+  // Relations
+  artists   EventArtistLink[]
+  tickets   Ticket[]
+  snapshots SalesSnapshot[]
+  forecast  DemandForecast?
+}
+
+// Explicit Join Table to allow the "isHeadliner" boolean
+model EventArtistLink {
+  eventId     String
+  event       Event   @relation(fields: [eventId], references: [id])
+  
+  artistId    String
+  artist      Artist  @relation(fields: [artistId], references: [id])
+
+  isHeadliner Boolean @default(false)
+
+  @@id([eventId, artistId]) // Composite Primary Key
+}
+
+// --------------------------------------
+// 4. TRANSACTIONS
+// --------------------------------------
+model Order {
+  id            String        @id @default(uuid())
+  totalAmount   Decimal       @db.Decimal(10, 2)
+  paymentStatus PaymentStatus @default(PENDING)
+
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+
+  tickets       Ticket[]
+}
+
+model Ticket {
+  id          String    @id @default(uuid())
+  qrCode      String    @unique
+  checkedInAt DateTime?
+
+  orderId     String
+  order       Order     @relation(fields: [orderId], references: [id])
+
+  eventId     String
+  event       Event     @relation(fields: [eventId], references: [id])
+}
+
+// --------------------------------------
+// 5. AI & ANALYTICS
+// --------------------------------------
+model SalesSnapshot {
+  id              BigInt   @id @default(autoincrement())
+  recordedAt      DateTime @default(now())
+  totalSold       Int
+  velocityPerHour Float
+
+  eventId         String
+  event           Event    @relation(fields: [eventId], references: [id])
+}
+
+model DemandForecast {
+  id                   String    @id @default(uuid())
+  predictedSelloutDate DateTime?
+  confidenceScore      Float
+  modelVersion         String
+
+  eventId              String    @unique // Enforces 1-to-1 relationship
+  event                Event     @relation(fields: [eventId], references: [id])
+}

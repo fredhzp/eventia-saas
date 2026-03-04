@@ -1,0 +1,35 @@
+version: '3.8'
+services:
+  # 1. PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: eventia_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # 2. Node.js Backend
+  backend:
+    build: ./backend
+    ports:
+      - "4000:4000"
+    environment:
+      DATABASE_URL: "postgresql://admin:password123@db:5432/eventia_db"
+      AI_SERVICE_URL: "http://ai-service:8000"
+    depends_on:
+      - db
+    command: npm run dev
+
+  # 3. Python AI Service
+  ai-service:
+    build: ./ai-service
+    ports:
+      - "8000:8000"
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  postgres_data:
