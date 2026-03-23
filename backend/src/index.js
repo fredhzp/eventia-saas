@@ -2,11 +2,19 @@ const express = require('express');
 const cors = require('cors');
 const prisma = require('./lib/prisma');
 
+const { register, login } = require('./controllers/authController');
+
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json()); // Allows us to read JSON data
+
+// -----------------------------------------
+// AUTH ROUTES
+// -----------------------------------------
+app.post('/api/auth/register', register);
+app.post('/api/auth/login', login);
 
 // -----------------------------------------
 // HEALTH CHECK ROUTE

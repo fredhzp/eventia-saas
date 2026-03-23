@@ -53,8 +53,8 @@ model User {
   role         Role   @default(USER)
 
   // Multi-tenancy link
-  tenantId     String
-  tenant       Tenant @relation(fields: [tenantId], references: [id])
+  tenantId     String?
+  tenant       Tenant? @relation(fields: [tenantId], references: [id])
 
   // Relations
   orders       Order[]
