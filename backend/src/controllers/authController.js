@@ -7,29 +7,40 @@ const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_for_dev";
 // 1. REGISTER A NEW USER
 const register = async (req, res) => {
   try {
-    const { email, password, role, tenantId } = req.body;
+    const { email, password, role } = req.body;
 
-    // Check if user already exists
+    // 1. Check if user already exists
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ error: "Email already in use." });
     }
 
-    // Hash the password securely
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    // Create the user in the database
+    let assignedTenantId = null;
+
+    // 2. NEW LOGIC: If they are an Organizer, create their "Company" (Tenant) first
+    if (role === "ORGANIZER") {
+      const newTenant = await prisma.tenant.create({
+        data: {
+          name: `${email.split('@')[0]}'s Organization`, // Default name
+        }
+      });
+      assignedTenantId = newTenant.id;
+    }
+
+    // 3. Create the user and link them to the new Tenant
     const newUser = await prisma.user.create({
       data: {
         email,
         passwordHash,
-        role: role || "USER", // Default to regular buyer
-        tenantId: tenantId || null // Link to an organizer workspace if provided
+        role: role || "USER",
+        tenantId: assignedTenantId // This is now a real UUID, not null
       }
     });
 
-    // Generate a JWT Token
+    // 4. Generate token with the NEW tenantId included
     const token = jwt.sign(
       { userId: newUser.id, role: newUser.role, tenantId: newUser.tenantId },
       JWT_SECRET,
@@ -38,10 +49,11 @@ const register = async (req, res) => {
 
     res.status(201).json({ message: "Registration successful", token });
   } catch (error) {
-    console.error(error);
+    console.error("Registration Error:", error);
     res.status(500).json({ error: "Server error during registration" });
   }
 };
+
 
 // 2. LOGIN AN EXISTING USER
 const login = async (req, res) => {

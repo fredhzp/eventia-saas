@@ -58,10 +58,15 @@ app.post('/api/events', async (req, res) => {
   try {
     const { title, date, venueId, tenantId } = req.body;
 
+    const parsedDate = new Date(date);
+    if (isNaN(parsedDate.getTime())) {
+      return res.status(400).json({ error: "Please provide a valid date and time." });
+    }
+
     const newEvent = await prisma.event.create({
       data: {
         title: title,
-        startTime: new Date(date),
+        startTime: parsedDate,
         venueId: venueId,
         tenantId: tenantId,
         status: 'DRAFT'
@@ -218,6 +223,52 @@ app.get('/api/tenants/:id', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to fetch tenant" });
+  }
+});
+
+// -----------------------------------------
+// VENUE ROUTES
+// -----------------------------------------
+
+// GET all venues for a specific tenant (This fixes your 404!)
+app.get('/api/venues', async (req, res) => {
+  try {
+    const { tenantId } = req.query;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: "tenantId is required to fetch venues" });
+    }
+
+    const venues = await prisma.venue.findMany({
+      where: { 
+        tenantId: tenantId 
+      }
+    });
+
+    res.json(venues);
+  } catch (error) {
+    console.error("Error fetching venues:", error);
+    res.status(500).json({ error: "Failed to fetch venues" });
+  }
+});
+
+// POST a new venue (So you can create them via the UI or Postman)
+app.post('/api/venues', async (req, res) => {
+  try {
+    const { name, capacity, tenantId } = req.body;
+
+    const newVenue = await prisma.venue.create({
+      data: {
+        name,
+        capacity: parseInt(capacity),
+        tenant: { connect: { id: tenantId } }
+      }
+    });
+
+    res.status(201).json(newVenue);
+  } catch (error) {
+    console.error("Error creating venue:", error);
+    res.status(500).json({ error: "Failed to create venue" });
   }
 });
 
