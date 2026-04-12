@@ -2,16 +2,9 @@ const prisma = require('../lib/prisma');
 
 const getVenues = async (req, res) => {
   try {
-    const { tenantId } = req.query;
-
-    if (!tenantId) {
-      return res.status(400).json({ error: "tenantId is required to fetch venues" });
-    }
-
     const venues = await prisma.venue.findMany({
-      where: { tenantId }
+      orderBy: { name: 'asc' }
     });
-
     res.json(venues);
   } catch (error) {
     console.error("Error fetching venues:", error);
@@ -21,13 +14,12 @@ const getVenues = async (req, res) => {
 
 const createVenue = async (req, res) => {
   try {
-    const { name, capacity, tenantId } = req.body;
+    const { name, capacity } = req.body;
 
     const newVenue = await prisma.venue.create({
       data: {
         name,
         capacity: parseInt(capacity),
-        tenant: { connect: { id: tenantId } }
       }
     });
 

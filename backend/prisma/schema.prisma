@@ -42,7 +42,6 @@ model Tenant {
 
   // Relations
   users  User[]
-  venues Venue[]
   events Event[]
 }
 
@@ -69,10 +68,6 @@ model Venue {
   capacity Int
   geoLat   Float?
   geoLong  Float?
-
-  // Multi-tenancy link
-  tenantId String
-  tenant   Tenant  @relation(fields: [tenantId], references: [id])
 
   // Relations
   events   Event[]

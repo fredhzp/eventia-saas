@@ -10,7 +10,7 @@ const register = async (req, res) => {
     res.status(201).json({ message: "Registration successful", token });
   } catch (error) {
     if (error.message === 'EMAIL_IN_USE') {
-      return res.status(400).json({ error: "Email already in use." });
+      return res.status(400).json({ error: "EMAIL_IN_USE" });
     }
     console.error("Registration Error:", error);
     res.status(500).json({ error: "Server error during registration" });

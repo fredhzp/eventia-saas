@@ -4,7 +4,9 @@ const { PrismaPg } = require('@prisma/adapter-pg');
 const { Pool } = require('pg');
 
 // 1. Setup the connection pool using the pg driver
-const connectionString = process.env.DATABASE_URL || "postgresql://admin:password123@localhost:5432/eventia_db";
+const connectionString = process.env.NODE_ENV === 'test'
+  ? (process.env.DATABASE_URL_TEST || 'postgresql://admin:password123@localhost:5432/eventia_test')
+  : (process.env.DATABASE_URL || 'postgresql://admin:password123@localhost:5432/eventia_db');
 const pool = new Pool({ connectionString });
 
 // 2. Create the Prisma Adapter

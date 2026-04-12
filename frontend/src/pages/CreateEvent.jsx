@@ -11,12 +11,10 @@ const CreateEvent = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (user?.tenantId) {
-      api.get(`/api/venues?tenantId=${user.tenantId}`)
-        .then(res => setVenues(res.data))
-        .catch(err => console.error("Could not load venues"));
-    }
-  }, [user]);
+    api.get('/api/venues')
+      .then(res => setVenues(res.data))
+      .catch(err => console.error("Could not load venues"));
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
