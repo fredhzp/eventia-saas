@@ -11,7 +11,10 @@ const adminRoutes   = require('./routes/adminRoutes');
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGIN || '*',
+  credentials: true,
+}));
 app.use(express.json());
 
 app.use('/api/auth',     authRoutes);
