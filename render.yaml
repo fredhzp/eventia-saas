@@ -33,16 +33,14 @@ services:
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     plan: free
 
-  - type: static
+  - type: web
     name: eventia-frontend
+    runtime: node
     region: oregon
     rootDir: frontend
     buildCommand: npm ci && npm run build
-    staticPublishPath: dist
+    startCommand: npx serve dist -l $PORT --single
+    plan: free
     envVars:
       - key: VITE_API_URL
         value: https://eventia-backend.onrender.com   # update after first deploy
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
