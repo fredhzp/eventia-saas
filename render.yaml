@@ -9,7 +9,7 @@ services:
     runtime: node
     region: oregon
     rootDir: backend
-    buildCommand: npm ci && npx prisma generate && npx prisma db push --accept-data-loss
+    buildCommand: npm ci && npx prisma generate && npx prisma db push --accept-data-loss && node src/scripts/seedAdmin.js
     startCommand: node src/index.js
     plan: free
     envVars:
