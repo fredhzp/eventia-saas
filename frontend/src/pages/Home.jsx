@@ -109,9 +109,9 @@ const Home = () => {
           ) : (
             <Link
               to="/login"
-              className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 transition"
+              className="px-4 py-2 rounded-lg border border-slate-200 text-sm font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition"
             >
-              Organizer Login
+              Organiser login
             </Link>
           )}
         </div>

@@ -148,4 +148,22 @@ const getPublicEvents = async (req, res) => {
   }
 };
 
-module.exports = { getEventStats, createEvent, generateForecast, getPublicEvents, updateEventStatus };
+const deleteEvent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tenantId } = req.user;
+
+    const event = await prisma.event.findUnique({ where: { id } });
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    if (event.tenantId !== tenantId) return res.status(403).json({ error: 'Forbidden' });
+    if (event.status === 'PUBLISHED') return res.status(400).json({ error: 'PUBLISHED_EVENT' });
+
+    await prisma.event.delete({ where: { id } });
+    res.status(204).send();
+  } catch (error) {
+    console.error('Error deleting event:', error);
+    res.status(500).json({ error: 'Failed to delete event' });
+  }
+};
+
+module.exports = { getEventStats, createEvent, generateForecast, getPublicEvents, updateEventStatus, deleteEvent };

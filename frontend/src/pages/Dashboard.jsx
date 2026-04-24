@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
+import Toast from '../components/Toast';
 import { AuthContext } from '../context/AuthContext';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import api from '../services/api';
@@ -9,6 +10,8 @@ const Dashboard = () => {
   const [tenantName, setTenantName] = useState("Organizer");
   const [forecastingId, setForecastingId] = useState(null);
   const [updatingId, setUpdatingId] = useState(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState(null);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -42,6 +45,20 @@ const Dashboard = () => {
     }
   };
 
+  const deleteEvent = async (id) => {
+    try {
+      await api.delete(`/api/events/${id}`, { headers: { Authorization: `Bearer ${user.token}` } });
+      setEvents(prev => prev.filter(e => e.id !== id));
+    } catch (err) {
+      const code = err.response?.data?.error;
+      setToast({
+        message: code === 'PUBLISHED_EVENT' ? 'Cancel the event before deleting it.' : 'Failed to delete event.',
+        type: 'error',
+      });
+    }
+    setPendingDeleteId(null);
+  };
+
   const runForecast = async (eventId) => {
     setForecastingId(eventId);
     try {
@@ -57,6 +74,7 @@ const Dashboard = () => {
   };
 
   return (
+    <>
     <div className="p-8 space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold text-slate-800">{tenantName} Dashboard</h2>
@@ -188,6 +206,14 @@ const Dashboard = () => {
                               Cancel
                             </button>
                           )}
+                          {event.status !== 'PUBLISHED' && (
+                            <button
+                              onClick={() => setPendingDeleteId(event.id)}
+                              className="px-2 py-1 text-xs font-semibold rounded-md bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+                            >
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -199,6 +225,32 @@ const Dashboard = () => {
         )}
       </div>
     </div>
+
+    {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+    {pendingDeleteId && (
+      <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
+          <p className="text-lg font-bold text-slate-800 mb-2">Delete this event?</p>
+          <p className="text-sm text-slate-500 mb-6">This cannot be undone.</p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => deleteEvent(pendingDeleteId)}
+              className="flex-1 bg-red-600 text-white py-2.5 rounded-xl font-bold hover:bg-red-700 transition"
+            >
+              Delete
+            </button>
+            <button
+              onClick={() => setPendingDeleteId(null)}
+              className="flex-1 border border-slate-200 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 
