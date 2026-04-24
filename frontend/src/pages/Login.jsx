@@ -8,7 +8,6 @@ const Login = () => {
   const [mode, setMode] = useState('login'); // 'login' | 'register'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('ORGANIZER');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useContext(AuthContext);
@@ -32,7 +31,7 @@ const Login = () => {
         const decoded = jwtDecode(res.data.token);
         navigate(decoded.role === 'ADMIN' ? '/admin' : '/dashboard');
       } else {
-        const res = await api.post('/api/auth/register', { email, password, role });
+        const res = await api.post('/api/auth/register', { email, password, role: 'ORGANIZER' });
         login(res.data.token);
         navigate('/dashboard');
       }
@@ -97,17 +96,6 @@ const Login = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-
-          {mode === 'register' && (
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="w-full border border-slate-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 text-slate-700"
-            >
-              <option value="ORGANIZER">Organizer — manage events</option>
-              <option value="USER">Attendee — buy tickets</option>
-            </select>
-          )}
 
           <button
             disabled={loading}

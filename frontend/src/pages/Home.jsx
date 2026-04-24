@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { QRCodeCanvas } from 'qrcode.react';
 import { AuthContext } from '../context/AuthContext';
 import api from '../services/api';
+import Toast from '../components/Toast';
 
 const CARD_GRADIENTS = [
   'from-violet-600 to-indigo-700',
@@ -21,6 +22,7 @@ const Home = () => {
   const [purchasedTicket, setPurchasedTicket] = useState(null);
   const [purchasing, setPurchasing] = useState(false);
   const [search, setSearch] = useState('');
+  const [toast, setToast] = useState(null);
 
   const filteredEvents = events.filter(e =>
     e.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -57,7 +59,10 @@ const Home = () => {
       });
       setPurchasedTicket(res.data.ticket);
     } catch (err) {
-      alert(err.response?.data?.error === 'SOLD_OUT' ? 'This event is sold out!' : 'Something went wrong. Please try again.');
+      setToast({
+        message: err.response?.data?.error === 'SOLD_OUT' ? 'This event is sold out!' : 'Something went wrong. Please try again.',
+        type: err.response?.data?.error === 'SOLD_OUT' ? 'warning' : 'error',
+      });
     } finally {
       setPurchasing(false);
     }
@@ -74,6 +79,7 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       {/* ── Navbar ─────────────────────────────────────────────────────── */}
       <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-slate-100 px-6 py-4 flex items-center justify-between">
@@ -170,7 +176,7 @@ const Home = () => {
               const capacity = event.venue?.capacity || 1;
               const fillPct  = Math.min(100, Math.round((sold / capacity) * 100));
               const isSoldOut      = sold >= capacity;
-              const isSellingFast  = !isSoldOut && (event.forecast?.confidenceScore ?? 0) >= 0.7;
+              const isSellingFast  = !isSoldOut && (event.forecast?.confidenceScore ?? 0) >= 0.5;
               const gradient = CARD_GRADIENTS[i % CARD_GRADIENTS.length];
 
               return (

@@ -6,3 +6,5 @@ thesis/
 .claude/
 TESTING.md
 backend/.env
+screenshots/
+screenshot-tool

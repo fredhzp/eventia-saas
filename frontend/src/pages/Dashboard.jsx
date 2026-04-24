@@ -152,7 +152,7 @@ const Dashboard = () => {
                         <div className="flex items-center gap-2">
                           {score != null ? (
                             <div className="flex items-center gap-1.5">
-                              <div className={`w-2 h-2 rounded-full ${score >= 0.7 ? 'bg-emerald-500' : score >= 0.4 ? 'bg-amber-400' : 'bg-slate-300'}`} />
+                              <div className={`w-2 h-2 rounded-full ${score >= 0.5 ? 'bg-emerald-500' : score >= 0.3 ? 'bg-amber-400' : 'bg-slate-300'}`} />
                               <span className="font-semibold text-slate-700">{Math.round(score * 100)}%</span>
                               <span className="text-slate-400 text-xs">sell-out</span>
                             </div>

@@ -56,6 +56,7 @@ const AdminDashboard = () => {
   const [events, setEvents] = useState([]);
   const [editing, setEditing] = useState(null);   // { type, data }
   const [showAdd, setShowAdd] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState(null);
   const [error, setError] = useState('');
 
   const headers = authHeaders(user?.token);
@@ -86,17 +87,17 @@ const AdminDashboard = () => {
   const addVenue = async (form) => {
     try {
       const r = await api.post('/api/admin/venues', form, headers);
-      setVenues(prev => [...prev, r.data]);
+      setVenues(prev => [...prev, { ...r.data, _count: { events: 0 } }]);
       setShowAdd(false);
     } catch { setError('Failed to create venue.'); }
   };
 
   const deleteVenue = async (id) => {
-    if (!window.confirm('Delete this venue? This cannot be undone.')) return;
     try {
       await api.delete(`/api/admin/venues/${id}`, headers);
       setVenues(prev => prev.filter(v => v.id !== id));
     } catch { setError('Cannot delete — venue may have associated events.'); }
+    setPendingDeleteId(null);
   };
 
   const saveEvent = async (form) => {
@@ -218,7 +219,7 @@ const AdminDashboard = () => {
                       </td>
                       <td className="px-6 py-4 text-right flex gap-3 justify-end">
                         <button onClick={() => setEditing({ type: 'venue', data: v })} className="text-xs font-semibold text-indigo-600 hover:underline">Edit</button>
-                        <button onClick={() => deleteVenue(v.id)} className="text-xs font-semibold text-red-500 hover:underline">Delete</button>
+                        <button onClick={() => setPendingDeleteId(v.id)} className="text-xs font-semibold text-red-500 hover:underline">Delete</button>
                       </td>
                     </tr>
                   ))}
@@ -305,6 +306,29 @@ const AdminDashboard = () => {
           onSave={addVenue}
           onClose={() => setShowAdd(false)}
         />
+      )}
+
+      {pendingDeleteId && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
+            <p className="text-lg font-bold text-slate-800 mb-2">Delete this venue?</p>
+            <p className="text-sm text-slate-500 mb-6">This cannot be undone.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => deleteVenue(pendingDeleteId)}
+                className="flex-1 bg-red-600 text-white py-2.5 rounded-xl font-bold hover:bg-red-700 transition"
+              >
+                Delete
+              </button>
+              <button
+                onClick={() => setPendingDeleteId(null)}
+                className="flex-1 border border-slate-200 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {editing?.type === 'event' && (
