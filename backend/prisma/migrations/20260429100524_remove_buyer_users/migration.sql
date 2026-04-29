@@ -13,8 +13,12 @@ ALTER TABLE "Order" DROP CONSTRAINT "Order_userId_fkey";
 ALTER TABLE "Venue" DROP CONSTRAINT "Venue_tenantId_fkey";
 
 -- AlterTable
-ALTER TABLE "Order" DROP COLUMN "userId",
-ADD COLUMN     "buyerEmail" TEXT NOT NULL;
+ALTER TABLE "Order" DROP COLUMN "userId";
+-- Add nullable first so existing rows are not rejected, backfill them,
+-- then tighten to NOT NULL so all future inserts must supply the value.
+ALTER TABLE "Order" ADD COLUMN "buyerEmail" TEXT;
+UPDATE "Order" SET "buyerEmail" = '' WHERE "buyerEmail" IS NULL;
+ALTER TABLE "Order" ALTER COLUMN "buyerEmail" SET NOT NULL;
 
 -- AlterTable
 ALTER TABLE "Venue" DROP COLUMN "tenantId";
