@@ -208,7 +208,8 @@ async function main() {
     const daysUntilEvent = Math.max(0, Math.floor((new Date(event.startTime) - Date.now()) / 86_400_000));
     try {
       const aiData = await forecaster.predictDemand({ eventId: event.id, venueCapacity, ticketsSold, daysUntilEvent, artistPopularity });
-      const predictedSelloutDate = new Date(Date.now() + aiData.predicted_days_to_sell_out * 24 * 60 * 60 * 1000);
+      const rawSelloutDate = new Date(Date.now() + aiData.predicted_days_to_sell_out * 24 * 60 * 60 * 1000);
+      const predictedSelloutDate = rawSelloutDate < new Date(event.startTime) ? rawSelloutDate : null;
       await prisma.demandForecast.create({
         data: { eventId: event.id, predictedSelloutDate, confidenceScore: aiData.confidence_score, modelVersion: aiData.model_version },
       });

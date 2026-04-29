@@ -30,12 +30,14 @@ const runForecastForEvent = async (eventId) => {
     artistPopularity,
   });
 
-  const futureDate = new Date(Date.now() + aiData.predicted_days_to_sell_out * 24 * 60 * 60 * 1000);
+  const rawSelloutDate = new Date(Date.now() + aiData.predicted_days_to_sell_out * 24 * 60 * 60 * 1000);
+  // If the model predicts sellout after the event starts, it won't sell out in time — store null.
+  const predictedSelloutDate = rawSelloutDate < new Date(event.startTime) ? rawSelloutDate : null;
 
   await prisma.demandForecast.upsert({
     where:  { eventId: event.id },
-    update: { confidenceScore: aiData.confidence_score, modelVersion: aiData.model_version, predictedSelloutDate: futureDate },
-    create: { eventId: event.id, confidenceScore: aiData.confidence_score, modelVersion: aiData.model_version, predictedSelloutDate: futureDate }
+    update: { confidenceScore: aiData.confidence_score, modelVersion: aiData.model_version, predictedSelloutDate },
+    create: { eventId: event.id, confidenceScore: aiData.confidence_score, modelVersion: aiData.model_version, predictedSelloutDate }
   });
 };
 
