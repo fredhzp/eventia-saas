@@ -1,7 +1,7 @@
 /**
  * BLACK-BOX integration tests — Tickets API
  * Techniques: equivalence partitioning, boundary value (sold-out at exact capacity),
- *             edge case (idempotent user creation via connectOrCreate).
+ *             edge case (repeat purchases by same email produce separate orders).
  */
 
 const { agent, prisma, clearTestDb, register, bearer, decode } = require('../helpers');
@@ -104,14 +104,17 @@ describe('BB-17 | POST /api/tickets/purchase — sold-out event (boundary: capac
 
 // ── BB-18 ─────────────────────────────────────────────────────────────────────
 
-describe('BB-18 | POST /api/tickets/purchase — same email twice creates only one user row', () => {
-  it('connectOrCreate is idempotent — exactly 1 user row exists for the email', async () => {
+describe('BB-18 | POST /api/tickets/purchase — same email twice creates two orders, no user row', () => {
+  it('buyerEmail is stored on each Order; no User row is created for the buyer', async () => {
     const email = 'repeat-buyer@test.com';
 
     await agent.post('/api/tickets/purchase').send({ eventId, customerEmail: email, tenantId });
     await agent.post('/api/tickets/purchase').send({ eventId, customerEmail: email, tenantId });
 
+    const orders = await prisma.order.findMany({ where: { buyerEmail: email } });
+    expect(orders).toHaveLength(2);
+
     const users = await prisma.user.findMany({ where: { email } });
-    expect(users).toHaveLength(1);
+    expect(users).toHaveLength(0);
   });
 });

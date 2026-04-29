@@ -55,8 +55,6 @@ model User {
   tenantId     String?
   tenant       Tenant? @relation(fields: [tenantId], references: [id])
 
-  // Relations
-  orders       Order[]
 }
 
 // --------------------------------------
@@ -127,9 +125,7 @@ model Order {
   id            String        @id @default(uuid())
   totalAmount   Decimal       @db.Decimal(10, 2)
   paymentStatus PaymentStatus @default(PENDING)
-
-  userId        String
-  user          User          @relation(fields: [userId], references: [id])
+  buyerEmail    String
 
   tickets       Ticket[]
 }

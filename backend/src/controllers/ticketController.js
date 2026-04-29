@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const prisma = require('../lib/prisma');
 
 const purchaseTicket = async (req, res) => {
@@ -18,24 +19,23 @@ const purchaseTicket = async (req, res) => {
       return res.status(400).json({ error: "SOLD_OUT", message: "Sorry, this event is sold out!" });
     }
 
+    // DESIGN NOTE (post-supervisor-review revision):
+    // Buyer authentication is intentionally out of scope for this MVP.
+    // The platform targets event organisers; buyers are identified by
+    // email only and retrieve their tickets via the /my-tickets lookup.
+    // Buyer email is stored directly on the Order entity rather than
+    // creating placeholder User rows. If buyer accounts are added later,
+    // introduce a proper registration flow and migrate existing orders
+    // by their buyerEmail.
     const ticket = await prisma.ticket.create({
       data: {
-        qrCode: `QR-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
+        qrCode: `QR-${crypto.randomUUID()}`,
         event: { connect: { id: eventId } },
         order: {
           create: {
             totalAmount: 0,
             paymentStatus: 'PAID',
-            user: {
-              connectOrCreate: {
-                where: { email: customerEmail },
-                create: {
-                  email: customerEmail,
-                  passwordHash: "dummy_hash",
-                  tenant: { connect: { id: tenantId } }
-                }
-              }
-            }
+            buyerEmail: customerEmail,
           }
         }
       }
@@ -53,40 +53,26 @@ const getTicketsByEmail = async (req, res) => {
     const { email } = req.query;
     if (!email) return res.status(400).json({ error: 'email is required' });
 
-    const user = await prisma.user.findUnique({
-      where: { email },
+    const tickets = await prisma.ticket.findMany({
+      where: { order: { buyerEmail: email } },
       include: {
-        orders: {
-          include: {
-            tickets: {
-              include: {
-                event: {
-                  include: { venue: true }
-                }
-              }
-            }
-          }
-        }
-      }
+        event: { include: { venue: true } },
+      },
     });
 
-    if (!user) return res.json([]);
+    const result = tickets.map(ticket => ({
+      id: ticket.id,
+      qrCode: ticket.qrCode,
+      checkedInAt: ticket.checkedInAt,
+      event: {
+        id: ticket.event.id,
+        title: ticket.event.title,
+        startTime: ticket.event.startTime,
+        venue: ticket.event.venue?.name ?? 'Unknown venue',
+      },
+    }));
 
-    const tickets = user.orders.flatMap(order =>
-      order.tickets.map(ticket => ({
-        id: ticket.id,
-        qrCode: ticket.qrCode,
-        checkedInAt: ticket.checkedInAt,
-        event: {
-          id: ticket.event.id,
-          title: ticket.event.title,
-          startTime: ticket.event.startTime,
-          venue: ticket.event.venue?.name ?? 'Unknown venue',
-        },
-      }))
-    );
-
-    res.json(tickets);
+    res.json(result);
   } catch (error) {
     console.error('getTicketsByEmail Error:', error);
     res.status(500).json({ error: error.message });
@@ -110,7 +96,7 @@ const checkinTicket = async (req, res) => {
       where: { qrCode },
       include: {
         event: { include: { venue: true } },
-        order: { include: { user: true } },
+        order: true,
       },
     });
 
@@ -127,7 +113,7 @@ const checkinTicket = async (req, res) => {
       data: { checkedInAt: new Date() },
       include: {
         event: { include: { venue: true } },
-        order: { include: { user: true } },
+        order: true,
       },
     });
 
@@ -142,7 +128,7 @@ const checkinTicket = async (req, res) => {
           startTime: updated.event.startTime,
           venue: updated.event.venue?.name ?? 'Unknown venue',
         },
-        buyerEmail: updated.order.user.email,
+        buyerEmail: updated.order.buyerEmail,
       },
     });
   } catch (error) {
