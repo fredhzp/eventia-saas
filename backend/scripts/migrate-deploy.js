@@ -1,13 +1,10 @@
 /**
  * Render deploy helper — baselines Prisma migration history then runs migrate deploy.
  *
- * Problem: the database was previously managed with `prisma db push`, so tables
- * exist but the _prisma_migrations history table does not. `prisma migrate deploy`
- * throws P3005 ("schema is not empty") when this is the case.
- *
- * Fix: create the history table if absent, insert records for migrations that are
- * already applied (using the real SHA-256 checksums Prisma expects), then hand off
- * to `prisma migrate deploy` which applies only genuinely new migrations.
+ * Handles three scenarios that arise when a DB was previously managed with db push:
+ *   P3005 — no _prisma_migrations table yet (first migration run)
+ *   P3009 — a previous migration attempt failed and is stuck; cleared before retry
+ *   Normal — history exists and is clean; only new migrations are applied
  */
 
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
@@ -20,16 +17,13 @@ const path         = require('path');
 
 const MIGRATIONS_DIR = path.join(__dirname, '../prisma/migrations');
 
-// Migrations that already exist in the DB (created via db push) but are not yet
-// recorded in _prisma_migrations. Add new ones here before running migrate deploy
-// for the first time after any future db-push-based schema change.
+// Migrations already in the DB (via db push) that have no history record yet.
 const BASELINE_MIGRATIONS = [
   '20260218115247_init_schema',
   '20260323145459_fix_optional_tenant',
 ];
 
-async function baseline(pool) {
-  // Create history table if it doesn't exist
+async function ensureHistoryTable(pool) {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS "_prisma_migrations" (
       "id"                  VARCHAR(36)  NOT NULL PRIMARY KEY,
@@ -43,7 +37,9 @@ async function baseline(pool) {
     )
   `);
   console.log('✅  _prisma_migrations table ready');
+}
 
+async function baseline(pool) {
   for (const name of BASELINE_MIGRATIONS) {
     const { rows } = await pool.query(
       'SELECT id FROM "_prisma_migrations" WHERE migration_name = $1',
@@ -68,11 +64,32 @@ async function baseline(pool) {
   }
 }
 
+async function clearFailedMigrations(pool) {
+  // P3009: if any migration is marked failed (finished_at IS NULL, rolled_back_at IS NULL)
+  // delete it so migrate deploy can retry it cleanly.
+  const { rows } = await pool.query(`
+    SELECT migration_name FROM "_prisma_migrations"
+    WHERE finished_at IS NULL AND rolled_back_at IS NULL
+  `);
+
+  if (rows.length === 0) return;
+
+  for (const { migration_name } of rows) {
+    await pool.query(
+      'DELETE FROM "_prisma_migrations" WHERE migration_name = $1',
+      [migration_name]
+    );
+    console.log(`🗑️   Cleared failed migration: ${migration_name} (will be retried)`);
+  }
+}
+
 async function main() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   try {
-    console.log('==> Baselining migration history…');
+    console.log('==> Preparing migration history…');
+    await ensureHistoryTable(pool);
     await baseline(pool);
+    await clearFailedMigrations(pool);
   } finally {
     await pool.end();
   }
