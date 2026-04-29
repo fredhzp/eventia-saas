@@ -9,7 +9,7 @@ services:
     runtime: node
     region: oregon
     rootDir: backend
-    buildCommand: npm ci && npx prisma generate && sh scripts/migrate-deploy.sh && node src/scripts/seedAdmin.js && node src/scripts/seed.js
+    buildCommand: npm ci && npx prisma generate && node scripts/migrate-deploy.js && node src/scripts/seedAdmin.js && node src/scripts/seed.js
     startCommand: node src/index.js
     plan: free
     envVars:
