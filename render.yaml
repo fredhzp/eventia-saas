@@ -9,7 +9,7 @@ services:
     runtime: node
     region: oregon
     rootDir: backend
-    buildCommand: npm ci && npx prisma generate && npx prisma db push --accept-data-loss && node src/scripts/seedAdmin.js
+    buildCommand: npm ci && npx prisma generate && npx prisma migrate deploy && node src/scripts/seedAdmin.js && node src/scripts/seed.js
     startCommand: node src/index.js
     plan: free
     envVars:
@@ -23,6 +23,8 @@ services:
         value: https://eventia-ai.onrender.com   # update after first deploy
       - key: NODE_ENV
         value: production
+      - key: SEED_DB
+        value: false
 
   - type: web
     name: eventia-ai

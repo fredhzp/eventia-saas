@@ -1,4 +1,12 @@
 require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
+
+// Safety guard: in production this script only runs when SEED_DB=true is set explicitly.
+// This prevents an accidental deploy from wiping live data.
+if (process.env.NODE_ENV === 'production' && process.env.SEED_DB !== 'true') {
+  console.log('ℹ️   Seed skipped (set SEED_DB=true to run in production).');
+  process.exit(0);
+}
+
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const prisma = require('../lib/prisma');

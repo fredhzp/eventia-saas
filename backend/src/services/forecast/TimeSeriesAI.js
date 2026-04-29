@@ -5,7 +5,8 @@ class TimeSeriesAI extends IForecastStrategy {
   async predictDemand(historyData) {
     const normalized = this.normalizeData(historyData);
 
-    const response = await axios.post('http://127.0.0.1:8000/predict', {
+    const aiUrl = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
+    const response = await axios.post(`${aiUrl}/predict`, {
       event_id:          normalized.eventId,
       venue_capacity:    normalized.venueCapacity,
       tickets_sold:      normalized.ticketsSold,
