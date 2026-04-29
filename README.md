@@ -1,92 +1,145 @@
-# Eventia 
+# Eventia
 ### Multi-Tenant SaaS Event Management & AI-Powered Ticketing
 
-Eventia is a scalable, multi-tenant Software-as-a-Service (SaaS) platform designed to modernize event management. It allows multiple organizations to securely manage events, venue capacities, and ticket sales within isolated data environments. 
-
-A dedicated **Python microservice** provides AI-driven demand forecasting to optimize venue planning and provide "Social Proof" indicators to buyers.
-
-> **Current Status:**  Active Development (University Capstone Project)  
-> **Milestone:** ~70% MVP Complete
+Eventia is a full-stack, multi-tenant SaaS platform for event management. Multiple independent organisations manage events, venues, and ticket sales in isolated data environments. A Python microservice provides AI-driven demand forecasting using a Gradient Boosting model trained on synthetic sales data.
 
 ---
 
-##  Core Features
+## Live Demo
 
-* **Strict Multi-Tenancy:** Database-level logical isolation (Shared Schema) ensures strict data boundaries between different organizer tenants.
-* **Atomic Transactions:** Secure, simultaneous generation of Orders and unique scannable QR-Code Tickets while strictly enforcing venue capacity limits.
-* **AI Demand Forecasting:** Asynchronous Python microservice that analyzes event metadata to predict sell-out probabilities.
-* **Organizer Dashboard:** Real-time data visualization of ticket sales and revenue using **Recharts**.
-* **Buyer Storefront:** Modern, responsive UI with dynamic "Social Proof" scarcity badges driven by AI predictions.
+The platform is deployed on Render.com and available at:
 
----
-
-##  Architecture & Tech Stack
-
-The system utilizes a decoupled microservices architecture to separate standard transactional logic from heavy data-science computations.
-
-| Component | Technology |
+| Service | URL |
 | :--- | :--- |
-| **Frontend** | React (Vite), Tailwind CSS, Recharts |
-| **Backend (REST API)** | Node.js, Express.js (Controller-Service-Repository) |
-| **Database & ORM** | PostgreSQL & Prisma ORM |
-| **AI Microservice** | Python, FastAPI, Pandas, Scikit-Learn |
+| Frontend | https://eventia.onrender.com |
+| Backend API | https://eventia-backend.onrender.com |
+| AI Service | https://eventia-ai.onrender.com |
+
+> **Note:** The free-tier instances spin down after 15 minutes of inactivity. The first request after an idle period takes ~30 seconds to wake up.
+
+**Demo credentials:**
+
+| Role | Email | Password |
+| :--- | :--- | :--- |
+| Admin | admin@eventia.com | Admin1234! |
+| Organiser (Tenant A) | alice@musicco.com | Organiser1234! |
+| Organiser (Tenant B) | bob@sportsfest.com | Organiser1234! |
 
 ---
 
-## 🚀 Local Development Setup
+## Tech Stack
 
-### Prerequisites
-* **Node.js** (v18.0+)
-* **Python** (v3.9+)
-* **PostgreSQL** (Running on port `5432`)
+| Layer | Technology |
+| :--- | :--- |
+| Frontend | React 19, Vite, Tailwind CSS, Recharts |
+| Backend API | Node.js, Express, Prisma ORM |
+| Database | PostgreSQL 15 |
+| AI Microservice | Python, FastAPI, Scikit-Learn, Pandas |
+| CI/CD | GitHub Actions → Render.com |
 
-### 1. Database & Backend Setup
+---
+
+## Running Locally
+
+### Option A — Docker (recommended, single command)
+
+Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+
+```bash
+docker compose up --build
+```
+
+| Service | Local URL |
+| :--- | :--- |
+| Frontend | http://localhost:5173 |
+| Backend API | http://localhost:4000 |
+| AI Service | http://localhost:8000 |
+
+The backend container runs `prisma migrate deploy` automatically on startup, so the database schema is applied without any manual steps.
+
+To stop and remove all containers and volumes:
+```bash
+docker compose down -v
+```
+
+---
+
+### Option B — Manual setup
+
+**Prerequisites:** Node.js 20+, Python 3.11+, PostgreSQL 15 running on port 5432.
+
+**1. Backend**
 ```bash
 cd backend
 npm install
+# Copy and edit the example env file
+cp .env.example .env
+# Edit DATABASE_URL and JWT_SECRET in .env
 
-# Create a .env file with your database URL
-# DATABASE_URL="postgresql://USERNAME:PASSWORD@localhost:5432/eventia_db?schema=public"
-
-# Initialize DB and generate Prisma Client
-npx prisma migrate dev --name init
-npx prisma generate
-
-# Start the Node Server
-npm run dev
+npx prisma migrate deploy
+node src/index.js
 ```
 
-### 2. AI Services
+**2. AI Service**
 ```bash
 cd ai-service
-
-# Create and activate virtual environment
+python -m venv venv
 # Windows:
-python -m venv venv && .\venv\Scripts\activate
+.\venv\Scripts\activate
 # Mac/Linux:
-python3 -m venv venv && source venv/bin/activate
+source venv/bin/activate
 
-pip install fastapi uvicorn scikit-learn pandas
-
-# Start the FastAPI Server
-uvicorn main:app --reload --port 8000
+pip install -r requirements.txt
+uvicorn main:app --port 8000
 ```
 
-### 3. Frontend Setup
+**3. Frontend**
 ```bash
 cd frontend
 npm install
-
-# Start the Vite Development Server
+# VITE_API_URL defaults to http://localhost:4000
 npm run dev
 ```
-----
-## Roadmap (Upcoming Features)
-[ ] Authentication & RBAC: Implementation of JWT-based login and Role-Based Access Control (Admin, Organizer, Buyer).
 
-[ ] Machine Learning Model: Training and integration of a real time-series forecasting model (Scikit-Learn/Prophet).
+---
 
-[ ] DevOps & CI/CD: Docker containerization of all services and deployment via GitHub Actions.
+## Running Tests
 
-----
+```bash
+cd backend
+npm test
+```
+
+All 46 tests (7 suites) run against a dedicated test database (`eventia_test`). The `DATABASE_URL_TEST` variable in `.env` controls the test database connection.
+
+---
+
+## Project Structure
+
+```
+eventia-saas/
+├── backend/          Node.js Express API (Controller-Service-Repository)
+│   ├── prisma/       Schema and migrations
+│   ├── src/
+│   │   ├── controllers/
+│   │   ├── services/
+│   │   ├── repositories/
+│   │   ├── routes/
+│   │   ├── middleware/
+│   │   └── tests/    Jest + Supertest integration and unit tests
+│   └── Dockerfile
+├── frontend/         React + Vite SPA
+│   └── Dockerfile
+├── ai-service/       Python FastAPI demand-forecasting microservice
+│   ├── main.py
+│   ├── tests/        pytest unit and integration tests
+│   └── Dockerfile
+├── .github/
+│   └── workflows/ci.yml   GitHub Actions CI
+├── render.yaml            Render.com deployment blueprint
+└── docker-compose.yml
+```
+
+---
+
 Developed by Freddy Heng Zi Ping — 2026

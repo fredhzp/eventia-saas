@@ -1,6 +1,6 @@
 version: '3.8'
 services:
-  # 1. PostgreSQL Database
+
   db:
     image: postgres:15-alpine
     environment:
@@ -11,8 +11,17 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d eventia_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
-  # 2. Node.js Backend
+  ai-service:
+    build: ./ai-service
+    ports:
+      - "8000:8000"
+
   backend:
     build: ./backend
     ports:
@@ -20,16 +29,22 @@ services:
     environment:
       DATABASE_URL: "postgresql://admin:password123@db:5432/eventia_db"
       AI_SERVICE_URL: "http://ai-service:8000"
+      JWT_SECRET: "local-docker-secret"
+      NODE_ENV: "production"
     depends_on:
-      - db
-    command: npm run dev
+      db:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
 
-  # 3. Python AI Service
-  ai-service:
-    build: ./ai-service
+  frontend:
+    build: ./frontend
     ports:
-      - "8000:8000"
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+      - "5173:5173"
+    environment:
+      VITE_API_URL: "http://localhost:4000"
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:
