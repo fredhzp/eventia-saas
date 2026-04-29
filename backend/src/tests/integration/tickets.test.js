@@ -118,3 +118,40 @@ describe('BB-18 | POST /api/tickets/purchase — same email twice creates two or
     expect(users).toHaveLength(0);
   });
 });
+
+// ── BB-27 ─────────────────────────────────────────────────────────────────────
+
+describe('BB-27 | GET /api/tickets — returns tickets for a known buyer email', () => {
+  it('returns an array with ticket and event details for the buyer', async () => {
+    const res = await agent.get('/api/tickets?email=buyer@test.com');
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBeGreaterThan(0);
+    expect(res.body[0].qrCode).toMatch(/^QR-/);
+    expect(res.body[0].event).toBeDefined();
+    expect(res.body[0].event.title).toBe('Ticket Test Event');
+  });
+});
+
+// ── BB-28 ─────────────────────────────────────────────────────────────────────
+
+describe('BB-28 | GET /api/tickets — missing email query param returns 400', () => {
+  it('returns 400 when email is not provided', async () => {
+    const res = await agent.get('/api/tickets');
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeDefined();
+  });
+});
+
+// ── BB-29 ─────────────────────────────────────────────────────────────────────
+
+describe('BB-29 | GET /api/tickets — email with no tickets returns empty array', () => {
+  it('returns an empty array for an email that has never purchased', async () => {
+    const res = await agent.get('/api/tickets?email=nobody@test.com');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+  });
+});

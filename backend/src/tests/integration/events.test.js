@@ -160,3 +160,66 @@ describe('BB-14 | PATCH /api/events/:id/status — no JWT returns 401', () => {
     expect(res.status).toBe(401);
   });
 });
+
+// ── BB-30 ─────────────────────────────────────────────────────────────────────
+
+describe('BB-30 | DELETE /api/events/:id — owner deletes own DRAFT event', () => {
+  it('returns 204 No Content and the event is removed from the database', async () => {
+    const created = await agent
+      .post('/api/events')
+      .set(bearer(orgToken))
+      .send({ title: 'To Delete', date: '2027-11-01T19:00:00Z', venueId, tenantId });
+    const deleteId = created.body.event.id;
+
+    const res = await agent
+      .delete(`/api/events/${deleteId}`)
+      .set(bearer(orgToken));
+
+    expect(res.status).toBe(204);
+
+    const gone = await prisma.event.findUnique({ where: { id: deleteId } });
+    expect(gone).toBeNull();
+  });
+});
+
+// ── BB-31 ─────────────────────────────────────────────────────────────────────
+
+describe('BB-31 | DELETE /api/events/:id — cannot delete a PUBLISHED event', () => {
+  it('returns 400 with error PUBLISHED_EVENT', async () => {
+    // draftEventId was published in BB-11
+    const res = await agent
+      .delete(`/api/events/${draftEventId}`)
+      .set(bearer(orgToken));
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('PUBLISHED_EVENT');
+  });
+});
+
+// ── BB-32 ─────────────────────────────────────────────────────────────────────
+
+describe('BB-32 | DELETE /api/events/:id — different tenant returns 403', () => {
+  it('returns 403 Forbidden when the token belongs to another tenant', async () => {
+    const created = await agent
+      .post('/api/events')
+      .set(bearer(orgToken))
+      .send({ title: 'Protected Event', date: '2027-12-01T19:00:00Z', venueId, tenantId });
+    const protectedId = created.body.event.id;
+
+    const res = await agent
+      .delete(`/api/events/${protectedId}`)
+      .set(bearer(org2Token));
+
+    expect(res.status).toBe(403);
+  });
+});
+
+// ── BB-33 ─────────────────────────────────────────────────────────────────────
+
+describe('BB-33 | DELETE /api/events/:id — no JWT returns 401', () => {
+  it('rejects unauthenticated delete with 401', async () => {
+    const res = await agent.delete(`/api/events/${draftEventId}`);
+
+    expect(res.status).toBe(401);
+  });
+});

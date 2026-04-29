@@ -97,3 +97,23 @@ describe('BB-22 | DELETE /api/admin/venues/:id — venue with events returns 500
     expect(res.body.error).toBeDefined();
   });
 });
+
+// ── BB-34 ─────────────────────────────────────────────────────────────────────
+
+describe('BB-34 | DELETE /api/admin/venues/:id — empty venue is deleted successfully', () => {
+  it('returns 200 with a confirmation message when no events are linked', async () => {
+    const venue = await prisma.venue.create({
+      data: { name: 'Empty Venue', capacity: 50 },
+    });
+
+    const res = await agent
+      .delete(`/api/admin/venues/${venue.id}`)
+      .set(bearer(adminToken));
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Venue deleted');
+
+    const gone = await prisma.venue.findUnique({ where: { id: venue.id } });
+    expect(gone).toBeNull();
+  });
+});
