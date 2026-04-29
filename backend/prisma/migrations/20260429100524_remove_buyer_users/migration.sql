@@ -6,11 +6,9 @@
   - Added the required column `buyerEmail` to the `Order` table without a default value. This is not possible if the table is not empty.
 
 */
--- DropForeignKey
-ALTER TABLE "Order" DROP CONSTRAINT "Order_userId_fkey";
-
--- DropForeignKey
-ALTER TABLE "Venue" DROP CONSTRAINT "Venue_tenantId_fkey";
+-- DropForeignKey (IF EXISTS — Render DB was seeded via db push and may not have these constraints)
+ALTER TABLE "Order" DROP CONSTRAINT IF EXISTS "Order_userId_fkey";
+ALTER TABLE "Venue" DROP CONSTRAINT IF EXISTS "Venue_tenantId_fkey";
 
 -- AlterTable
 ALTER TABLE "Order" DROP COLUMN "userId";
