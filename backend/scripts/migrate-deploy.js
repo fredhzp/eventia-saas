@@ -95,13 +95,13 @@ async function main() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   try {
     console.log('==> Preparing migration history…');
+    await ensureHistoryTable(pool);
+    await clearFailedMigrations(pool);
     const fresh = await isFreshDatabase(pool);
     if (fresh) {
       console.log('ℹ️   Fresh database detected — skipping baseline, all migrations will run.');
     } else {
-      await ensureHistoryTable(pool);
       await baseline(pool);
-      await clearFailedMigrations(pool);
     }
   } finally {
     await pool.end();
