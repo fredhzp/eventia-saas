@@ -96,11 +96,12 @@ async function main() {
   try {
     console.log('==> Preparing migration history…');
     await ensureHistoryTable(pool);
-    await clearFailedMigrations(pool);
     const fresh = await isFreshDatabase(pool);
     if (fresh) {
-      console.log('ℹ️   Fresh database detected — skipping baseline, all migrations will run.');
+      await pool.query('DELETE FROM "_prisma_migrations"');
+      console.log('ℹ️   Fresh database detected — cleared migration history, all migrations will run.');
     } else {
+      await clearFailedMigrations(pool);
       await baseline(pool);
     }
   } finally {
