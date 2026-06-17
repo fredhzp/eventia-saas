@@ -95,7 +95,14 @@ async function main() {
   }
 
   console.log('==> Running prisma migrate deploy…');
-  execSync('npx prisma migrate deploy', { stdio: 'inherit' });
+  try {
+    const output = execSync('npx prisma migrate deploy', { stdio: ['inherit', 'pipe', 'pipe'], encoding: 'utf8' });
+    if (output) console.log(output);
+  } catch (err) {
+    if (err.stdout) console.log(err.stdout);
+    if (err.stderr) console.error(err.stderr);
+    throw new Error(`prisma migrate deploy failed (exit ${err.status})`);
+  }
 }
 
 main().catch(err => { console.error(err); process.exit(1); });
