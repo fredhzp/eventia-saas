@@ -1,5 +1,5 @@
 databases:
-  - name: eventia-db
+  - name: eventia_db_frpe
     plan: free
     region: oregon
 
@@ -15,7 +15,7 @@ services:
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: eventia-db
+          name: eventia_db_frpe
           property: connectionString
       - key: JWT_SECRET
         generateValue: true
