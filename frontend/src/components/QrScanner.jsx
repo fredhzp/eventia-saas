@@ -14,7 +14,7 @@
 const QrScanner = ({ onScan, disabled }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
-    const value = e.target.elements.qrCode.value.trim().toUpperCase();
+    const value = e.target.elements.qrCode.value
     if (value) {
       onScan(value);
       e.target.reset();
